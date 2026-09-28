@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>안양 지산 낙찰사례 지도</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  html, body { margin:0; height:100%; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:#fff; }
+  #map { position:absolute; inset:0; }
+  .mk { display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+        font-size:11px; font-weight:700; color:#412402; line-height:1; white-space:nowrap;
+        box-shadow:0 1px 3px rgba(0,0,0,.35); }
+  .auc  { background:#FAC775; border:2px solid #854F0B; border-radius:3px; }
+  .auc.basement { border-style:dashed; background:#FDE3B8; }
+  .pub  { background:#85B7EB; border:2px solid #0C447C; border-radius:3px; color:#042C53; }
+  .subj { background:#E24B4A; border:2px solid #791F1F; border-radius:50%; color:#fff; }
+  .deal { background:#D3D1C7; border:2px solid #5F5E5A; border-radius:50%; color:#2C2C2A; }
+  .call { position:relative; width:0; height:0; }
+  .lead { position:absolute; left:0; top:0; overflow:visible; pointer-events:none; }
+  .lead line { stroke:#854F0B; stroke-width:1.5; }
+  .call.subject .lead line { stroke:#791F1F; stroke-width:2; }
+  .dot { position:absolute; left:-5px; top:-5px; width:10px; height:10px; background:#FAC775;
+         border:2px solid #854F0B; box-sizing:border-box; border-radius:2px; }
+  .call.subject .dot { left:-8px; top:-8px; width:16px; height:16px; background:#E24B4A;
+         border:2px solid #791F1F; border-radius:50%; }
+  .card { position:absolute; transform:translate(-50%,-50%); background:rgba(255,255,255,.96);
+          border:1px solid #c9b58f; border-radius:5px; padding:3px 5px 5px; box-shadow:0 1px 3px rgba(0,0,0,.25);
+          white-space:nowrap; cursor:pointer; }
+  .call.subject .card { border:2px solid #E24B4A; }
+  .card .nm { font-size:11px; color:#333; margin-bottom:3px; text-align:center; }
+  .call.subject .card .nm { color:#791F1F; font-weight:700; }
+  .card .chips { display:flex; gap:3px; justify-content:center; }
+  .chip { width:50px; height:42px; flex-direction:column; gap:1px; }
+  .chip .u { font-size:12px; }
+  .chip .r { font-size:10px; font-weight:600; opacity:.85; }
+  .chip .m { font-size:9px; font-weight:700; color:#0C447C; }
+  .chip.subj .m { color:#fff; }
+  .chip.subj { width:56px; height:46px; border-radius:14px; }
+  .card .band { font-size:10px; color:#0C447C; font-weight:400; }
+  .legend, .info { background:#fff; padding:8px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.3);
+        font-size:12px; color:#222; line-height:1.6; }
+  .legend .row { display:flex; align-items:center; gap:6px; }
+  .legend .sw { width:14px; height:14px; box-sizing:border-box; display:inline-block; }
+  .info { max-width:320px; }
+  .info b { font-size:13px; }
+  .sum { border-collapse:collapse; margin:4px 0; font-size:11px; }
+  .sum th, .sum td { padding:1px 5px; text-align:right; border-bottom:1px solid #eee; }
+  .sum th:first-child, .sum td:first-child { text-align:left; color:#555; }
+  .sum td:nth-child(2) { color:#791F1F; font-weight:700; }
+  .pop table { border-collapse:collapse; font-size:12px; }
+  .pop td { padding:1px 6px 1px 0; vertical-align:top; white-space:nowrap; }
+  .pop td:first-child { color:#666; white-space:nowrap; }
+  .pop h4 { margin:0 0 4px; font-size:13px; }
+  @media (max-width:480px){ .info{ max-width:180px; font-size:11px; } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// 구분, 사건번호, 소재지번, 건물명, 호수, 토지py, 건물py, 분양py, 낙찰시점, 감정가M, 감정단가, 낙찰가M, 낙찰단가, 낙찰가율, 응찰, 유찰, lng, lat, 비고, 시세하한, 시세상한, 시세평균, 시세평균대비(%)
+// 단가는 분양면적 기준(M/py). 본건 낙찰가·낙찰단가는 현재 최저가
+const rows = [
+ ["본건","25-1154","관양동 1802","평촌오비즈타워","2412",8.1675,33.275,66.55,"",804,12.1,411.6,6.2,null,null,null,126.970266,37.399641,"",7,9,8,77],
+ ["경매","25-1192(1)","평촌동 82","인덕원역더리브디하우트","1125",4,13,26,"'26.9월",414,15.9,190,7.3,46,1,4,126.974765,37.396047,"김민호",8.7,8.7,8.7,84],
+ ["경매","25-1192(2)","평촌동 82","인덕원역더리브디하우트","1126",4,13,26,"'26.9월",414,15.9,190,7.3,46,1,4,126.974765,37.396047,"김민호",8.7,8.7,8.7,84],
+ ["경매","25-1192(3)","평촌동 82","인덕원역더리브디하우트","1127",4,13,26,"'26.9월",414,15.9,190,7.3,46,1,4,126.974765,37.396047,"김민호",8.7,8.7,8.7,84],
+ ["경매","25-953","평촌동 87-10","평촌케이-비즈리움","615",4,12,24,"'26.8월",223,9.3,137,5.7,62,3,3,126.974779,37.394091,"",7,8,7.5,76],
+ ["경매","25-101166(1)","관양동 799 외","안양메가밸리","616",36,114,228,"'26.8월",1640,7.2,1070,4.7,65,1,3,126.968329,37.402003,"",6,8,7,67],
+ ["경매","25-1093","호계동 555-42 외","안양SKV1센터","205",6,22,44,"'26.7월",380,8.6,250,5.7,66,1,2,126.948783,37.374052,"㈜진메커닉스",7,7,7,81],
+ ["경매","25-101166(2)","관양동 799 외","안양메가밸리","624",38,120,240,"'26.7월",1710,7.1,1145,4.8,67,3,2,126.968329,37.402003,"",6,8,7,68],
+ ["경매","25-101142","관양동 954-1","평촌디지털엠파이어","203",12,39,78,"'26.4월",932,11.9,648,8.3,70,1,2,126.973758,37.393005,"㈜더블리츠",7,9,8,104],
+ ["경매","25-100811(2)","호계동 900","에이스하이테크시티범계","223",9,31,62,"'26.4월",544,8.8,372,6.0,69,4,3,126.943548,37.387143,"",7,9,8,75],
+ ["경매","25-472","관양동 922","평촌역 하이필드","C-D912",2,7,14,"'26.3월",135,9.6,110,7.9,81,1,1,126.970089,37.394331,"",7,9,8,98],
+ ["경매","24-2396","관양동 891","안양스마트베이Ⅱ","805",10,24,48,"'25.8월",457,9.5,380,7.9,83,1,2,126.971407,37.398015,"",7,9,8,99]
+];
+const I = { kind:0, no:1, addr:2, bldg:3, ho:4, land:5, bld:6, sale:7, dt:8, ap:9, apu:10, bid:11, bidu:12, rate:13, n:14, fail:15, lng:16, lat:17, memo:18, lo:19, hi:20, avg:21, mrate:22 };
+const note = { "25-1154":"낙찰가·낙찰단가는 현재 최저가 기준", "25-1192(1)":"NPL", "25-1192(2)":"NPL", "25-1192(3)":"NPL", "25-100811(2)":"NPL" };
+
+const fmt = n => (Math.round(n*100)/100).toLocaleString("ko-KR");
+function caseNo(c){ const m=c.match(/^(\d+)-(\d+)(\(\d+\))?$/); return m?`[안양${m[1]}타경${m[2]}${m[3]||""}]`:c; }
+
+const map = L.map("map", { zoomControl:true });
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+map.fitBounds(rows.map(r=>[r[I.lat],r[I.lng]]), { paddingTopLeft:[120,150], paddingBottomRight:[260,170] });
+
+// 같은 좌표끼리 묶고, 건물별 카드를 지시선으로 연결(겹침 방지용 오프셋, px)
+const groups = {};
+rows.forEach((r,i) => { r.idx=i; const k = r[I.lng]+","+r[I.lat]; (groups[k] = groups[k] || []).push(r); });
+
+const offs = {
+  "평촌오비즈타워":[70,-100],
+  "안양메가밸리":[-150,-60], "안양스마트베이Ⅱ":[-170,-5], "인덕원역더리브디하우트":[175,-5],
+  "평촌역 하이필드":[-150,75], "평촌케이-비즈리움":[170,85], "평촌디지털엠파이어":[30,140],
+  "에이스하이테크시티범계":[0,-60], "안양SKV1센터":[0,-60]
+};
+
+Object.values(groups).forEach(g => {
+  g.sort((a,b)=>b[I.bidu]-a[I.bidu]);
+  const lat = g[0][I.lat], lng = g[0][I.lng], name = g[0][I.bldg];
+  const isSubj = g[0][I.kind]==="본건";
+  const [dx,dy] = offs[name] || [0,-50];
+  const chips = g.map(r => {
+    const cls = isSubj ? "subj" : (r[I.kind]==="공매"?"pub":"auc");
+    const rate = isSubj ? Math.round(r[I.bid]/r[I.ap]*100) : r[I.rate];
+    return `<div class="mk ${cls} chip" data-idx="${r.idx}" title="${r[I.ho]}호"><span class="u">${r[I.bidu].toFixed(1)}</span><span class="r">${rate}%</span><span class="m">시세 ${r[I.mrate]}%</span></div>`;
+  }).join("");
+  const r0 = g[0], band = r0[I.lo]===r0[I.hi] ? `${r0[I.avg]}` : `${r0[I.lo]}~${r0[I.hi]} (평균 ${r0[I.avg]})`;
+  const title = (isSubj ? `본건 ${name} ${r0[I.ho]}호 (최저가)` : name) + `<div class="band">시세 ${band}</div>`;
+  const html = `<div class="call${isSubj?" subject":""}">
+     <svg class="lead" width="1" height="1"><line x1="0" y1="0" x2="${dx}" y2="${dy}"/></svg>
+     <div class="dot"></div>
+     <div class="card" style="left:${dx}px;top:${dy}px">
+       <div class="nm">${title}</div><div class="chips">${chips}</div>
+     </div></div>`;
+  const m = L.marker([lat,lng], {
+    icon:L.divIcon({ className:"", iconSize:[0,0], iconAnchor:[0,0], html }),
+    zIndexOffset: isSubj ? 10000 : 0
+  }).addTo(map);
+  // 지시선을 카드 테두리에서 끊음
+  const el = m.getElement(), card = el.querySelector(".card"), ln = el.querySelector("line");
+  const hw = card.offsetWidth/2, hh = card.offsetHeight/2;
+  const t = Math.min(hw/Math.abs(dx||1e-9), hh/Math.abs(dy||1e-9), 1);
+  ln.setAttribute("x2", dx - dx*t); ln.setAttribute("y2", dy - dy*t);
+  m.on("click", e => {
+    const c = e.originalEvent && e.originalEvent.target.closest(".chip");
+    const r = rows[c ? +c.dataset.idx : g[0].idx];
+    L.popup({ maxWidth:360, minWidth:300, offset:[dx, dy-12] }).setLatLng([lat,lng]).setContent(popHtml(r)).openOn(map);
+  });
+});
+
+function popHtml(r){
+  const subj = r[I.kind]==="본건";
+  const row = (k,v) => (v===null || v==="" || v===undefined) ? "" : `<tr><td>${k}</td><td>${v}</td></tr>`;
+  const sep = `<tr><td colspan="2" style="border-top:1px solid #ddd;padding-top:3px"></td></tr>`;
+  const minRate = subj ? Math.round(r[I.bid]/r[I.ap]*100) : null;
+  return `<div class="pop"><h4>${subj?"본건 ":""}${caseNo(r[I.no])}</h4><table>
+    ${row("소재지번","안양시 동안구 "+r[I.addr])}
+    ${row("건물·호수",`${r[I.bldg]} ${r[I.ho]}호`)}
+    ${row("토지(py)",fmt(r[I.land]))}
+    ${row("건물(py)",fmt(r[I.bld]))}
+    ${row("분양면적(py)",fmt(r[I.sale]))}
+    ${row("낙찰시점",r[I.dt])}
+    ${row("감정가(M)",fmt(r[I.ap]))}
+    ${row("감정단가(M/py)",r[I.apu].toFixed(1))}
+    ${row(subj?"최저가(M)":"낙찰가(M)",fmt(r[I.bid]))}
+    ${row(subj?"최저단가(M/py)":"낙찰단가(M/py)","<b>"+r[I.bidu].toFixed(1)+"</b>")}
+    ${row(subj?"최저가율(%)":"낙찰가율(%)", subj?minRate:r[I.rate])}
+    ${row("응찰(명)",r[I.n])}
+    ${row("유찰(회)",r[I.fail])}
+    ${sep}
+    ${row("시세하한단가(M/py)",r[I.lo])}
+    ${row("시세상한단가(M/py)",r[I.hi])}
+    ${row("시세평균단가(M/py)",r[I.avg])}
+    ${row(subj?"시세평균 대비 최저가율(%)":"시세평균 대비 낙찰가율(%)","<b>"+r[I.mrate]+"</b>")}
+    ${row("비고",r[I.memo])}
+    ${row("특이",note[r[I.no]])}
+  </table></div>`;
+}
+
+// 범례
+const legend = L.control({ position:"topright" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div","legend");
+  d.innerHTML = `
+   <div class="row"><span class="sw" style="background:#E24B4A;border:2px solid #791F1F;border-radius:50%"></span>본건</div>
+   <div class="row"><span class="sw" style="background:#FAC775;border:2px solid #854F0B;border-radius:2px"></span>경매 낙찰사례</div>
+   <div class="row"><span class="sw" style="background:#85B7EB;border:2px solid #0C447C;border-radius:2px"></span>공매 낙찰사례</div>
+   <div class="row"><span class="sw" style="background:#D3D1C7;border:2px solid #5F5E5A;border-radius:50%"></span>실거래 매매사례</div>
+   <div style="margin-top:4px;color:#666">라벨 1줄 = 낙찰단가(M/py, 분양면적)<br>라벨 2줄 = 낙찰가율(감정가 대비)<br><span style="color:#0C447C">라벨 3줄 = 시세평균 대비 낙찰가율</span><br><span style="color:#0C447C">카드 상단 = 시세단가 하한~상한(평균)</span><br>본건 = 현재 최저가 기준</div>`;
+  return d;
+};
+legend.addTo(map);
+
+// 요약
+const info = L.control({ position:"bottomleft" });
+info.onAdd = () => {
+  const d = L.DomUtil.create("div","info");
+  d.innerHTML = `<b>안양 동안구 지산 경매 낙찰사례</b>
+   <table class="sum">
+    <tr><th></th><th>본건</th><th>사례 11건</th></tr>
+    <tr><td>시세하한단가(M/py)</td><td>7.0</td><td>6.0~8.7</td></tr>
+    <tr><td>시세상한단가(M/py)</td><td>9.0</td><td>7.0~9.0</td></tr>
+    <tr><td>시세평균단가(M/py)</td><td>8.0</td><td>7.0~8.7</td></tr>
+    <tr><td>낙찰단가(M/py)</td><td>6.2</td><td>4.7~8.3</td></tr>
+    <tr><td>감정가 대비(%)</td><td>51</td><td>46~83</td></tr>
+    <tr><td>시세평균 대비(%)</td><td>77</td><td>67~104</td></tr>
+    <tr><td>시세평균 대비 중앙값(%)</td><td>-</td><td>84</td></tr>
+   </table>
+   <span style="color:#666">본건 낙찰단가·비율은 현재 최저가 기준<br>단가는 분양면적 기준 · 마커를 누르면 상세 표시</span>`;
+  return d;
+};
+info.addTo(map);
+</script>
+</body>
+</html>
